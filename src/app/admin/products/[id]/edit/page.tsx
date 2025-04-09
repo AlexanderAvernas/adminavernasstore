@@ -1,0 +1,86 @@
+// app/admin/products/[id]/edit/page.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+
+export default function EditProduct() {
+  const router = useRouter();
+  const { id } = useParams();
+  const [form, setForm] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      const res = await fetch(`/api/products/${id}`);
+      const data = await res.json();
+      setForm({
+        name: data.name || '',
+        slug: data.slug || '',
+        price: data.price?.toString() || '',
+        description: data.description || '',
+        category: data.category || '',
+        collection: data.collection || '',
+        image: data.image || '',
+      });
+    };
+    fetchProduct();
+  }, [id]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await fetch(`/api/products/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
+    router.push('/admin/products');
+  };
+
+  const handleDelete = async () => {
+    const confirmed = confirm('Är du säker på att du vill ta bort produkten?');
+    if (!confirmed) return;
+
+    await fetch(`/api/products/${id}`, {
+      method: 'DELETE',
+    });
+    router.push('/admin/products');
+  };
+
+  if (!form) return <p>Laddar...</p>;
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-4">Redigera Produkt</h1>
+      {['name', 'slug', 'price', 'description', 'category', 'collection'].map((field) => (
+        <div key={field} className="mb-4">
+          <label className="block mb-1 capitalize">{field}</label>
+          <input
+            type="text"
+            name={field}
+            value={(form as any)[field]}
+            onChange={handleChange}
+            className="w-full border rounded p-2"
+          />
+        </div>
+      ))}
+      <div className="mb-4">
+        <label className="block mb-1">Bildens Asset ID (från Contentful)</label>
+        <input
+          type="text"
+          name="image"
+          value={form.image}
+          onChange={handleChange}
+          className="w-full border rounded p-2"
+        />
+      </div>
+      <div className="flex gap-4">
+        <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">Uppdatera</button>
+        <button type="button" onClick={handleDelete} className="bg-red-500 text-white px-4 py-2 rounded">Ta bort</button>
+      </div>
+    </form>
+  );
+}
