@@ -1,29 +1,29 @@
 // app/api/upload/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { getEnvironment } from '../../lib/contentful';
+import { NextResponse } from "next/server";
+import { writeFile } from "fs/promises";
+import path from "path";
+import { mkdirSync, existsSync } from "fs";
 
-export async function POST(req: NextRequest) {
-  const env = await getEnvironment();
-  const data = await req.formData();
-  const file = data.get('file') as File;
+export async function POST(request: Request) {
+  const formData = await request.formData();
+  const file = formData.get("file") as File;
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  if (!file) {
+    return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
+  }
 
-  const asset = await env.createAsset({
-    fields: {
-      title: { 'en-US': file.name },
-      file: {
-        'en-US': {
-          contentType: file.type,
-          fileName: file.name,
-          content: buffer,
-        },
-      },
-    },
-  });
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
 
-  const processed = await asset.processForAllLocales();
-  const published = await processed.publish();
+  const uploadDir = path.join(process.cwd(), "public", "uploads");
 
-  return NextResponse.json({ assetId: published.sys.id });
+  // Skapa mappen om den inte finns
+  if (!existsSync(uploadDir)) {
+    mkdirSync(uploadDir, { recursive: true });
+  }
+
+  const filePath = path.join(uploadDir, file.name);
+  await writeFile(filePath, buffer);
+
+  return NextResponse.json({ success: true, url: `/uploads/${file.name}` });
 }

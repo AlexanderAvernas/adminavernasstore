@@ -11,13 +11,17 @@
   "dependencies": {
     "contentful": "^11.5.13",
     "contentful-management": "^11.52.0",
+    "formidable": "^3.5.2",
     "next": "15.2.5",
+    "next-connect": "^1.0.0",
+    "node-fetch": "^3.3.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/formidable": "^3.4.5",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
