@@ -33,7 +33,26 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (data.description) fields.description = { [locale]: data.description };
   if (data.category) fields.category = { [locale]: data.category };
   if (data.collection) fields.collection = { [locale]: data.collection };
-  if (data.image) fields.image = { [locale]: { sys: { type: 'Link', linkType: 'Asset', id: data.image } } };
+
+  // Säker hantering av image-id oavsett format
+  if (data.image) {
+    const imageId =
+      typeof data.image === 'string'
+        ? data.image
+        : data.image?.sys?.id || data.image?.id || '';
+
+    if (imageId) {
+      fields.image = {
+        [locale]: {
+          sys: {
+            type: 'Link',
+            linkType: 'Asset',
+            id: imageId,
+          },
+        },
+      };
+    }
+  }
 
   Object.assign(entry.fields, fields);
   const updated = await entry.update();
