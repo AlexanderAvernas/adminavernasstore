@@ -25,16 +25,21 @@ export default function EditProduct() {
         image: data.image || '',
       });
 
-      if (data.image) {
+      if (data.image && typeof data.image === 'object' && data.image.sys?.id) {
         try {
-          const assetRes = await fetch(`/api/contentful/asset/${data.image}`);
+          const assetId = data.image.sys.id;
+          const assetRes = await fetch(`/api/contentful/asset/${assetId}`);
           const asset = await assetRes.json();
           const url = asset.fields?.file?.['en-US']?.url;
           if (url) setImageUrl(`https:${url}`);
+
+          // Uppdatera form.image till ID:t så det blir rätt vid submit också
+          setForm((prev: any) => ({ ...prev, image: assetId }));
         } catch (err) {
           console.error('Kunde inte ladda bild:', err);
         }
       }
+
     };
 
     fetchProduct();
