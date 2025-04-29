@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import ImageUpload from '../../../components/ImageUpload'; // Anpassa denna importväg vid behov
+import ImageUpload from '../../../components/ImageUpload'; // Korrigera vägen vid behov
 
 export default function NewProduct() {
   const router = useRouter();
@@ -14,23 +14,59 @@ export default function NewProduct() {
     category: '',
     collection: '',
     image: '',
-    imageUrl: '', // används bara för preview
+    image1: '',
+    image2: '',
+    image3: '',
+    imagePreview: '',
+    image1Preview: '',
+    image2Preview: '',
+    image3Preview: '',
   });
 
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    // Enkel validering
+    const newErrors: any = { ...errors };
+
+    if (name === 'slug') {
+      if (/\s/.test(value)) {
+        newErrors.slug = 'Slug får inte innehålla mellanslag.';
+      } else {
+        delete newErrors.slug;
+      }
+    }
+
+    if (name === 'category') {
+      if (/[A-Z]/.test(value)) {
+        newErrors.category = 'Kategori ska endast innehålla små bokstäver.';
+      } else {
+        delete newErrors.category;
+      }
+    }
+
+    setErrors(newErrors);
+    setForm({ ...form, [name]: value });
   };
 
-  const handleImageUpload = (imageData: { id: string; url: string }) => {
+  const handleImageUpload = (field: 'image' | 'image1' | 'image2' | 'image3') => (data: { id: string; url: string }) => {
     setForm((prev) => ({
       ...prev,
-      image: imageData.id,      // Asset ID för Contentful
-      imageUrl: imageData.url,  // används för förhandsvisning
+      [field]: data.id,
+      [`${field}Preview`]: data.url,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Kontrollera om det finns valideringsfel innan submit
+    if (Object.keys(errors).length > 0) {
+      alert('Rätta till felen innan du skickar in.');
+      return;
+    }
 
     const res = await fetch('/api/products', {
       method: 'POST',
@@ -58,22 +94,39 @@ export default function NewProduct() {
             name={field}
             value={(form as any)[field]}
             onChange={handleChange}
-            className="w-full border rounded p-2"
+            className={`w-full border rounded p-2 ${
+              errors[field] ? 'border-red-500' : 'border-gray-300'
+            }`}
           />
+          {field === 'slug' && (
+            <p className="text-sm text-gray-500">Endast små bokstäver och bindestreck. Inga mellanslag.</p>
+          )}
+          {field === 'category' && (
+            <p className="text-sm text-gray-500">Skriv endast med små bokstäver, t.ex. <code>kläder</code>.</p>
+          )}
+          {errors[field] && <p className="text-sm text-red-600">{errors[field]}</p>}
         </div>
       ))}
 
+      {/* Main Image */}
       <div className="mb-4">
-        <label className="block mb-1">Ladda upp bild</label>
-        <ImageUpload onUploaded={handleImageUpload} />
+        <label className="block mb-1">Huvudbild</label>
+        <ImageUpload onUploaded={handleImageUpload('image')} />
+        {form.imagePreview && (
+          <img src={form.imagePreview} alt="Preview" className="mt-2 max-w-xs rounded border" />
+        )}
       </div>
 
-      {form.imageUrl && (
-        <div className="mb-4">
-          <p className="text-sm text-gray-600 mb-1">Förhandsvisning:</p>
-          <img src={form.imageUrl} alt="Förhandsvisning" className="max-w-xs rounded border" />
+      {/* Extra Images */}
+      {['image1', 'image2', 'image3'].map((field) => (
+        <div key={field} className="mb-4">
+          <label className="block mb-1">Extra bild {field.slice(-1)}</label>
+          <ImageUpload onUploaded={handleImageUpload(field as any)} />
+          {(form as any)[`${field}Preview`] && (
+            <img src={(form as any)[`${field}Preview`]} alt="Preview" className="mt-2 max-w-xs rounded border" />
+          )}
         </div>
-      )}
+      ))}
 
       <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
         Spara

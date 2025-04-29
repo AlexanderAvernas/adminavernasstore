@@ -8,7 +8,6 @@ export default function EditProduct() {
   const router = useRouter();
   const { id } = useParams();
   const [form, setForm] = useState<any>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -22,24 +21,38 @@ export default function EditProduct() {
         description: data.description || '',
         category: data.category || '',
         collection: data.collection || '',
-        image: data.image || '',
+        image: data.image?.sys?.id || '',
+        image1: data.image1?.sys?.id || '',
+        image2: data.image2?.sys?.id || '',
+        image3: data.image3?.sys?.id || '',
+        imagePreview: '',
+        image1Preview: '',
+        image2Preview: '',
+        image3Preview: '',
       });
 
-      if (data.image && typeof data.image === 'object' && data.image.sys?.id) {
-        try {
-          const assetId = data.image.sys.id;
-          const assetRes = await fetch(`/api/contentful/asset/${assetId}`);
-          const asset = await assetRes.json();
-          const url = asset.fields?.file?.['en-US']?.url;
-          if (url) setImageUrl(`https:${url}`);
+      // Hämta bild-URLs för preview
+      const fetchImageUrl = async (assetId: string) => {
+        if (!assetId) return null;
+        const res = await fetch(`/api/contentful/asset/${assetId}`);
+        const asset = await res.json();
+        return `https:${asset.fields.file['en-US'].url}`;
+      };
 
-          // Uppdatera form.image till ID:t så det blir rätt vid submit också
-          setForm((prev: any) => ({ ...prev, image: assetId }));
-        } catch (err) {
-          console.error('Kunde inte ladda bild:', err);
-        }
-      }
+      const previews = await Promise.all([
+        fetchImageUrl(data.image?.sys?.id),
+        fetchImageUrl(data.image1?.sys?.id),
+        fetchImageUrl(data.image2?.sys?.id),
+        fetchImageUrl(data.image3?.sys?.id),
+      ]);
 
+      setForm((prev: any) => ({
+        ...prev,
+        imagePreview: previews[0],
+        image1Preview: previews[1],
+        image2Preview: previews[2],
+        image3Preview: previews[3],
+      }));
     };
 
     fetchProduct();
@@ -49,9 +62,12 @@ export default function EditProduct() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleImageUpload = (uploaded: { id: string; url: string }) => {
-    setForm((prev: any) => ({ ...prev, image: uploaded.id }));
-    setImageUrl(uploaded.url); // Direkt sätta förhandsvisning
+  const handleImageUpload = (field: 'image' | 'image1' | 'image2' | 'image3') => (data: { id: string; url: string }) => {
+    setForm((prev: any) => ({
+      ...prev,
+      [field]: data.id,
+      [`${field}Preview`]: data.url,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,23 +112,45 @@ export default function EditProduct() {
         </div>
       ))}
 
-      {/* Nuvarande bildvisning */}
-      {imageUrl && (
-        <div className="mb-4">
-          <label className="block mb-1">Nuvarande bild</label>
-          <img
-            src={imageUrl}
-            alt="Produktbild"
-            className="w-32 h-32 object-cover rounded"
-          />
-        </div>
-      )}
-
-      {/* Ladda upp ny bild */}
+      {/* Main Image */}
       <div className="mb-4">
-        <label className="block mb-1">Uppdatera produktbild</label>
-        <ImageUpload onUploaded={handleImageUpload} />
+        <label className="block mb-1">Huvudbild</label>
+        {form.imagePreview && (
+          <img src={form.imagePreview} alt="Huvudbild" className="w-32 h-32 object-cover rounded mb-2" />
+        )}
+        <ImageUpload onUploaded={handleImageUpload('image')} />
       </div>
+
+      {/* Extra Images */}
+     {['image1', 'image2', 'image3'].map((field) => (
+  <div key={field} className="mb-4">
+    <label className="block mb-1">Extra bild {field.slice(-1)}</label>
+    {(form as any)[`${field}Preview`] && (
+      <div className="mb-2">
+        <img
+          src={(form as any)[`${field}Preview`]}
+          alt="Extra bild"
+          className="w-32 h-32 object-cover rounded"
+        />
+        <button
+          type="button"
+          onClick={() =>
+            setForm((prev: any) => ({
+              ...prev,
+              [field]: '',
+              [`${field}Preview`]: '',
+            }))
+          }
+          className="text-sm text-red-600 mt-1 underline"
+        >
+          Radera bild
+        </button>
+      </div>
+    )}
+    <ImageUpload onUploaded={handleImageUpload(field as any)} />
+  </div>
+))}
+
 
       <div className="flex gap-4">
         <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">
