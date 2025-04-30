@@ -13,6 +13,7 @@
     "contentful-management": "^11.52.0",
     "formidable": "^3.5.2",
     "next": "15.2.5",
+    "next-auth": "^4.24.11",
     "next-connect": "^1.0.0",
     "node-fetch": "^3.3.2",
     "react": "^19.0.0",

@@ -44,13 +44,22 @@
 // }
 
 
-// app/admin/products/page.tsx
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { redirect } from 'next/navigation';
+
 import { getProducts } from '../../lib/contentful';
-import { ProductEntrySkeleton } from '../../types/product';
+import { ProductEntrySkeleton } from '@/types/product';
 import { Entry } from 'contentful';
-import AdminProductsPageClient from '../AdminProductsPageClient';
+import AdminProductsPageClient from '../../components/admin/AdminProductsPageClient';
 
 export default async function AdminProducts() {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    redirect('/login');
+  }
+
   const products: Entry<ProductEntrySkeleton>[] = await getProducts();
 
   return (
