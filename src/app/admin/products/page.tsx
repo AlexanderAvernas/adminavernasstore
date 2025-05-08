@@ -49,7 +49,7 @@ import { authOptions } from '../../lib/authOptions';
 import { redirect } from 'next/navigation';
 
 import { getProducts } from '../../lib/contentful';
-import { ProductEntrySkeleton } from '@/types/product';
+import { ProductEntrySkeleton } from '../../types/product';
 import { Entry } from 'contentful';
 import AdminProductsPageClient from '../../components/admin/AdminProductsPageClient';
 
