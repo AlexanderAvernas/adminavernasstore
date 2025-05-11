@@ -1,28 +1,40 @@
+// src/pages/api/upload.ts
+
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
 import { createClient } from 'contentful-management';
 import fs from 'fs';
 
-// ⛔️ Viktigt: Inaktivera Next.js body parsing, eftersom formidable hanterar filen
+// ⛔️ Inaktivera Next.js body parsing (formidable hanterar det)
 export const config = {
   api: {
     bodyParser: false,
   },
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).end('Only POST allowed');
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<void> {
+  if (req.method !== 'POST') {
+    res.status(405).end('Only POST allowed');
+    return;
+  }
 
   const form = formidable({ keepExtensions: true });
 
   form.parse(req, async (err, fields, files) => {
     if (err || !files.file) {
       console.error('Formidable error:', err);
-      return res.status(500).json({ error: 'Fel vid uppladdning.' });
+      res.status(500).json({ error: 'Fel vid uppladdning.' });
+      return;
     }
 
     try {
       const file = Array.isArray(files.file) ? files.file[0] : files.file;
+
+      const fileBuffer = fs.readFileSync(file.filepath);
+      const arrayBuffer: ArrayBuffer = Uint8Array.from(fileBuffer).buffer;
 
       const client = createClient({
         accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN!,
@@ -33,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // 1. Skapa upload från fil
       const upload = await env.createUpload({
-        file: fs.readFileSync(file.filepath),
+        file: arrayBuffer,
       });
 
       // 2. Skapa asset som pekar på upload
@@ -61,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 3. Processa asset
       await asset.processForAllLocales();
 
-      // 🔄 4. Hämta uppdaterad version innan publicering
+      // 4. Hämta uppdaterad version innan publicering
       const updatedAsset = await env.getAsset(asset.sys.id);
       const publishedAsset = await updatedAsset.publish();
 

@@ -3,9 +3,10 @@
 import { NextRequest } from 'next/server';
 import { createClient } from 'contentful-management';
 import formidable from 'formidable';
+import { createReadStream } from 'fs';
 import { readFile } from 'fs/promises';
 
-// Disabla Next.js default body parsing
+// Inaktivera Next.js bodyParser
 export const config = {
   api: {
     bodyParser: false,
@@ -15,7 +16,8 @@ export const config = {
 export async function POST(req: NextRequest) {
   try {
     const form = formidable({ multiples: false });
-    const formData: { [key: string]: any } = await new Promise((resolve, reject) => {
+
+    const formData: { fields: any; files: any } = await new Promise((resolve, reject) => {
       form.parse(req as any, (err, fields, files) => {
         if (err) reject(err);
         else resolve({ fields, files });
@@ -24,8 +26,6 @@ export async function POST(req: NextRequest) {
 
     const file = formData.files.file;
 
-    const fileBuffer = await readFile(file.filepath);
-
     const client = createClient({
       accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN!,
     });
@@ -33,7 +33,9 @@ export async function POST(req: NextRequest) {
     const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID!);
     const environment = await space.getEnvironment('master');
 
-    const asset = await environment.createAsset({
+    const fileStream = createReadStream(file.filepath);
+
+    const asset = await environment.createAssetFromFiles({
       fields: {
         title: {
           'en-US': file.originalFilename || 'Uploaded Image',
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
           'en-US': {
             contentType: file.mimetype,
             fileName: file.originalFilename,
-            content: fileBuffer,
+            file: fileStream,
           },
         },
       },
@@ -55,7 +57,10 @@ export async function POST(req: NextRequest) {
     const publishedAsset = await refreshedAsset.publish();
 
     return new Response(
-      JSON.stringify({ assetId: publishedAsset.sys.id, url: publishedAsset.fields.file['en-US'].url }),
+      JSON.stringify({
+        assetId: publishedAsset.sys.id,
+        url: publishedAsset.fields.file['en-US'].url,
+      }),
       { status: 200 }
     );
   } catch (error) {
