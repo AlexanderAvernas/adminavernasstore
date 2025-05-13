@@ -65,9 +65,9 @@ export default function AdminProductsPageClient({ products }) {
             <h2 className="text-xl font-semibold">
               {product.fields.name}
             </h2>
-            <p className="text-sm text-gray-600">
+            {/* <p className="text-sm text-gray-600">
               {product.fields.description}
-            </p>
+            </p> */}
             <p className="text-sm font-medium text-gray-800">
               {product.fields.price} kr
             </p>
