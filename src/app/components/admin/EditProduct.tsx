@@ -6,7 +6,7 @@ import ImageUpload from '../ImageUpload';
 
 export default function EditProduct() {
   const router = useRouter();
-  const { id } = useParams();
+  const id = (useParams() as { id: string }).id;
   const [form, setForm] = useState<any>(null);
 
   useEffect(() => {
